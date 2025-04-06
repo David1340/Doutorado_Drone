@@ -6,6 +6,7 @@ import cv2
 import render
 import pygame
 import matplotlib.pyplot as plt
+import time
 def get_robot_position(sim, robot_name):
     handle = sim.getObjectHandle(robot_name)
     return sim.getObjectPosition(handle, -1)  # Posição global do robô
@@ -56,13 +57,19 @@ motor4 = sim.getObject('/Quadcopter/propeller[3]')
 plt.ion()  # Ativa o modo interativo do Matplotlib
 fig, ax = plt.subplots()
 img_display = None
-target = sim.getObject('/target')
+pygame.event.pump()
+ex_const = joystick.get_axis(0)
+ey_const = joystick.get_axis(1)
+dx_const = joystick.get_axis(2)
+dy_const = joystick.get_axis(3)
 
 while True:#sim.getSimulationTime() < 10*60:
     sim.step()  # Atualizar a simulação
     inicio = sim.getSimulationTime()
+    pygame.event.pump()  # Atualiza os eventos do pygame    
+    image = []
     image, resolution = sim.getVisionSensorImg(camera)
-    pygame.event.pump()  # Atualiza os eventos do pygame
+    
     if image:
         # Converte a imagem para um formato adequado para exibição
         img_array = np.frombuffer(image, dtype=np.uint8).reshape(resolution[1], resolution[0], 3)
@@ -74,19 +81,25 @@ while True:#sim.getSimulationTime() < 10*60:
             img_display.set_data(img_array)
 
     # Lê os valores dos analógicos (geralmente eixo 0 e 1 são o analógico esquerdo, e 2 e 3 o direito)
-    eixo_esquerdo_x = joystick.get_axis(0)  # Esquerda (-1) / Direita (+1)
-    eixo_esquerdo_y = joystick.get_axis(1)  # Cima (-1) / Baixo (+1)
-    eixo_direito_x = joystick.get_axis(2)   # Esquerda (-1) / Direita (+1)
-    eixo_direito_y = joystick.get_axis(3)   # Cima (-1) / Baixo (+1)
-
+    eixo_esquerdo_x = round(joystick.get_axis(0),2)  # Esquerda (-1) / Direita (+1)
+    eixo_esquerdo_y = round(joystick.get_axis(1),2)  # Cima (-1) / Baixo (+1)
+    eixo_direito_x = round(joystick.get_axis(2),2) # Esquerda (-1) / Direita (+1)
+    eixo_direito_y = round(joystick.get_axis(3),2)  # Cima (-1) / Baixo (+1)
+    print(eixo_esquerdo_x, eixo_esquerdo_y, eixo_direito_x, eixo_direito_y)
     position = np.array(sim.getObjectPosition(drone, -1)) # Obtém a posição do drone no referencial global (-1)
     position[2] += -eixo_esquerdo_y * 0.5
     position[0] += -eixo_direito_y * 0.5
     position[1] += -eixo_direito_x * 0.5
-    sim.setObjectPosition(target, -1, position.tolist())  # Atualiza a posição do alvo (target) com a nova posição do drone
 
     # Obter posição do robô
-    #robot_pos = get_robot_position(sim, robot_name)
-    #robot_x, robot_y = robot_pos[0], robot_pos[1]
+    robot_pos = get_robot_position(sim, robot_name)
+    robot_x, robot_y = robot_pos[0], robot_pos[1]
     render.update_scene(position[0],position[1],texture_path)
+    handleScript = sim.getObject('/Quadcopter/Script')
+    try:
+        sim.callScriptFunction('cmd_vel',handleScript,-eixo_direito_y,
+                               eixo_direito_x,-eixo_esquerdo_y,eixo_esquerdo_x)
+    except Exception as e:
+        print(f"[AVISO] Erro ao chamar 'cmd_vel': {e}")
+        time.sleep(1.0)
     print(sim.getSimulationTime())
