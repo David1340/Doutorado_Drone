@@ -15,7 +15,7 @@ response = drone_client.enableVirtualStick()
 print("Enable Virtual Stick response:", response)
 
 controllerAltitude = Proportional_Controller(max=0.5,k=1.5) #Controller for Altitude (axis z)
-desirableAltitude = 15 #Desired altitude [meters]
+desirableAltitude = 10 #Desired altitude [meters]
 minimumErrorAltitude = 0.2 #Minimum error for altitude [meters]
 
 #Controle no eixo z
@@ -45,7 +45,7 @@ response = drone_client.setLeftPosition(0.0, 0.0)
 print("Send Virtual Stick Control response:", response)
 
 #Obtaining date for vx velocity modeling
-fullTime = 15 #[s]
+fullTime = 5 #[s]
 samplingTime = 0.1 #[s]
 dataVx = []
 dataVy = []
@@ -54,7 +54,7 @@ dataTime = []
 dataUx = []
 initialExperimentTimeGlobal = time.time()
 ux_previous = 0.0 #Initial value for ux
-values = [0.25,0.0]#[0.25,0.0,0.5,0.0,0.75,0.0, 1.0,0.0] #Values for ux to be tested
+values = [0.25,0.0]#[0.25,0.0,0.5,0.0,0.75,0.0, 1.0,0.0] # #Values for ux to be tested
 for ux in values:
     initialExperimentTime = time.time()
     while (time.time() - initialExperimentTime) < fullTime:
@@ -80,7 +80,7 @@ response = drone_client.setRightPosition(0, 0)
 drone_client.disableVirtualStick()
 
 
-nameFile = 'dados2.csv'
+nameFile = 'dados7.csv'
 with open(nameFile, 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerow(['vx','vy','vz','ux', 'time'])  # cabeçalhos (opcional)
