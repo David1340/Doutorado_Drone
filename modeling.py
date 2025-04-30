@@ -54,7 +54,7 @@ dataTime = []
 dataUx = []
 initialExperimentTimeGlobal = time.time()
 ux_previous = 0.0 #Initial value for ux
-values = [0.25,0.0]#[0.25,0.0,0.5,0.0,0.75,0.0, 1.0,0.0] # #Values for ux to be tested
+values =  [0.25,0.0,0.5,0.0,0.75,0.0, 1.0,0.0] # #Values for ux to be tested
 for ux in values:
     initialExperimentTime = time.time()
     while (time.time() - initialExperimentTime) < fullTime:
