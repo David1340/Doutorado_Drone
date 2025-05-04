@@ -29,7 +29,7 @@ if poly.interiors:
 plt.plot(waypoints[:,0], waypoints[:,1], '-o', color='blue', markersize=2)
 plt.axis('equal')
 plt.title(f"Trajetória com varredura a {angle_deg}°")
-plt.show()
+#plt.show()
 
 # Conectar ao servidor
 client = zmq.RemoteAPIClient()
@@ -42,12 +42,12 @@ camera = sim.getObject('/Quadcopter/visionSensor')
 controlScript = sim.getObject('/Quadcopter/Script')
 
 #parãmetros do controlador
-tamos = 0.1
+tamos = 0.15
 erro_min = 0.1
 zD = 12
-cz = Proportional_Controller(max=0.5,k=2.5)
-cx = Proportional_Controller(max=1.0,k=2.5)
-cw = Proportional_Controller(max=1.0,k=5)
+cz = Proportional_Controller(max=0.3,k=1)
+cx = Proportional_Controller(max=0.2,k=0.5)
+cw = Proportional_Controller(max=0.25,k=5)
 xD = waypoints[0,0]
 yD = waypoints[0,1]
 #Obtém a altitude desejada e gira em em direção do primeio waypoint
@@ -85,51 +85,76 @@ while True:
 uz = 0.0
 sim.callScriptFunction('cmd_vel',controlScript,0.0,0.0,0.0,0.0)
 
-
-
-for i,waypoint in enumerate(waypoints):
-#Controle de posição planar (xD,yD)
+tempo_max = 60.0  # tempo máximo por waypoint, em segundos
+trajetoria_x = []
+trajetoria_y = []
+parar_tudo = False
+for i, waypoint in enumerate(waypoints):
+    if parar_tudo:
+        break
+    # Controle de posição planar (xD,yD)
     xD = waypoint[0]
     yD = waypoint[1]
+
+    inicio_global = sim.getSimulationTime()  # tempo de início global desse waypoint
+
     while(True):
         sim.step()
-        inicio = sim.getSimulationTime()
+        tempo_atual = sim.getSimulationTime()
+        
         # Obter a posição
         position = np.array(sim.getObjectPosition(drone, -1))
-        xR,yR = position[0], position[1]
+        xR, yR = position[0], position[1]
+        trajetoria_x.append(xR)
+        trajetoria_y.append(yR)
         d = np.sqrt((xD - xR)**2 + (yD - yR)**2)
         thD = np.arctan2(yD - yR, xD - xR)
         orientation = sim.getObjectOrientation(drone)
 
-        yaw,pitch,roll = sim.alphaBetaGammaToYawPitchRoll(orientation[0],orientation[1],orientation[2])
-        
-        thR = yaw
+        yaw, pitch, roll = sim.alphaBetaGammaToYawPitchRoll(orientation[0], orientation[1], orientation[2])
+        thR = fromPiToPi(yaw)
+        th = fromPiToPi(thD - thR)
 
-        # converte theta_e para -pi a pi
-        thR = fromPiToPi(thR)
-        th = thD - thR
-        # converte theta_e para -pi a pi
-        th = fromPiToPi(th)       
         uz = 0.0
-        uy = 0.0
-        up = cw.action(th)
-        ux = cx.action(d)*np.power(np.cos(th/2),32)
-        print(f"\033[3A\033[Kd: {d:.2f},th: {(180/np.pi)*th:.1f}\n\033[Kux: {ux}\n\033[Kwaypoint[{i}]: {waypoint} ")
+        uy = 0.0    
+        up = round(cw.action(th),3)
+        ux = round(cx.action(d) * np.power(np.cos(th / 2), 100),2)
+
+        print(f"\033[3A\033[Kd: {d:.2f},th: {(180/np.pi)*th:.1f}\n\033[Kux: {ux},up: {up}\n\033[Kwaypoint[{i}]: {waypoint} ")
+
         try:
-            sim.callScriptFunction('cmd_vel',controlScript,ux,
-                                uy,uz,-up)
+            sim.callScriptFunction('cmd_vel', controlScript, ux, uy, uz, -up)
         except Exception as e:
             print(f"[AVISO] Erro ao chamar 'cmd_vel': {e}")
 
-        if(np.abs(d) < 5*erro_min):
+        if np.abs(d) < 10 * erro_min:
             print("Concluído.")
             break
 
-        while(sim.getSimulationTime() - inicio < tamos):
+        # Critério de tempo: se exceder tempo_max, para
+        if tempo_atual - inicio_global > tempo_max:
+            print(f"[AVISO] Tempo máximo ({tempo_max}s) excedido para o waypoint {i}.")
+            parar_tudo = True
+            break
+
+        while sim.getSimulationTime() - tempo_atual < tamos:
             pass
 
 try:
-    sim.callScriptFunction('cmd_vel',controlScript,0.0,
-                        0.0,0.0,0.0)
+    sim.callScriptFunction('cmd_vel', controlScript, 0.0, 0.0, 0.0, 0.0)
 except Exception as e:
     print(f"[AVISO] Erro ao chamar 'cmd_vel': {e}")
+
+plt.figure(figsize=(8, 6))
+plt.plot(trajetoria_x, trajetoria_y, label='Trajetória do drone', color='blue')
+waypoints_x = [wp[0] for wp in waypoints]
+waypoints_y = [wp[1] for wp in waypoints]
+plt.scatter(waypoints_x, waypoints_y, color='red', label='Waypoints', marker='x')
+
+plt.title('Trajetória do Drone')
+plt.xlabel('X (m)')
+plt.ylabel('Y (m)')
+plt.grid(True)
+plt.axis('equal')
+plt.legend()
+plt.show()
