@@ -35,20 +35,9 @@ pygame.joystick.init()
 joystick = pygame.joystick.Joystick(0)
 joystick.init()
 
-# Obtém o identificador do sensor de visão
-camera = sim.getObject('/Quadcopter/visionSensor')
-
 # Obtém o identificador do drone
 drone = sim.getObject('/Quadcopter')
 
-motor1 = sim.getObject('/Quadcopter/propeller[0]')
-motor2 = sim.getObject('/Quadcopter/propeller[1]')
-motor3 = sim.getObject('/Quadcopter/propeller[2]')
-motor4 = sim.getObject('/Quadcopter/propeller[3]')
-
-#plt.ion()  # Ativa o modo interativo do Matplotlib
-#fig, ax = plt.subplots()
-img_display = None
 pygame.event.pump()
 ex_const = joystick.get_axis(0)
 ey_const = joystick.get_axis(1)
@@ -67,9 +56,6 @@ while True:#sim.getSimulationTime() < 10*60:
     eixo_direito_y = round(joystick.get_axis(3),2)  # Cima (-1) / Baixo (+1)
     print(eixo_esquerdo_x, eixo_esquerdo_y, eixo_direito_x, eixo_direito_y)
     position = np.array(sim.getObjectPosition(drone, -1)) # Obtém a posição do drone no referencial global (-1)
-    position[2] += -eixo_esquerdo_y * 0.5
-    position[0] += -eixo_direito_y * 0.5
-    position[1] += -eixo_direito_x * 0.5
 
     handleScript = sim.getObject('/Quadcopter/Script')
     try:
