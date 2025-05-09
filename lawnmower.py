@@ -118,7 +118,7 @@ for i, waypoint in enumerate(waypoints):
         uz = 0.0
         uy = 0.0    
         up = round(cw.action(th),3)
-        ux = round(cx.action(d) * np.power(np.cos(th / 2), 100),2)
+        ux = round(0.2 * np.power(np.cos(th / 2), 100),2) #round(cx.action(d) * np.power(np.cos(th / 2), 100),2)
 
         print(f"\033[3A\033[Kd: {d:.2f},th: {(180/np.pi)*th:.1f}\n\033[Kux: {ux},up: {up}\n\033[Kwaypoint[{i}]: {waypoint} ")
 
