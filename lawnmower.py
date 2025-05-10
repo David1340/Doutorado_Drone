@@ -47,7 +47,7 @@ erro_min = 0.1
 zD = 12
 cz = Proportional_Controller(max=0.3,k=1)
 cx = Proportional_Controller(max=0.2,k=0.5)
-cw = Proportional_Controller(max=0.25,k=5)
+cw = Proportional_Controller(max=0.25,k=3)
 xD = waypoints[0,0]
 yD = waypoints[0,1]
 #Obtém a altitude desejada e gira em em direção do primeio waypoint
