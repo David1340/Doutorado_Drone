@@ -14,7 +14,8 @@ def get_robot_position(sim, robot_name):
 # Conectar ao servidor
 client = zmq.RemoteAPIClient()
 sim = client.require('sim')
-
+sim.loadScene('./scenes/Drone/base.ttt')
+time.sleep(1.0)
 # Inicia a simulação
 sim.startSimulation()
 

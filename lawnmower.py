@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from utils import lawmowerPath, Proportional_Controller, fromPiToPi
 import coppeliasim_zmqremoteapi_client as zmq
 import sys
+import time
 
 # Horizontal coverage at ground leve 17.32m
 # Vertical coverage at ground level 12.99m
@@ -34,8 +35,9 @@ plt.title(f"Trajetória com varredura a {angle_deg}°")
 # Conectar ao servidor
 client = zmq.RemoteAPIClient()
 sim = client.require('sim')
+sim.loadScene('./scenes/Drone/base.ttt')
+time.sleep(1.0)
 sim.startSimulation()
-
 # Nome do robô no CoppeliaSim
 drone = sim.getObject('/Quadcopter')
 camera = sim.getObject('/Quadcopter/visionSensor')
