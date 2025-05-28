@@ -52,6 +52,7 @@ cx = Proportional_Controller(max=0.2,k=0.5)
 cw = Proportional_Controller(max=0.25,k=3)
 xD = waypoints[0,0]
 yD = waypoints[0,1]
+
 #Obtém a altitude desejada e gira em em direção do primeio waypoint
 while True:
     sim.step()
@@ -92,6 +93,8 @@ trajetoria_x = []
 trajetoria_y = []
 parar_tudo = False
 for i, waypoint in enumerate(waypoints):
+    if(i == 1):
+        tempo_inicial = sim.getSimulationTime()
     if parar_tudo:
         break
     # Controle de posição planar (xD,yD)
@@ -130,7 +133,9 @@ for i, waypoint in enumerate(waypoints):
             print(f"[AVISO] Erro ao chamar 'cmd_vel': {e}")
 
         if np.abs(d) < 10 * erro_min:
-            print("Concluído.")
+            tempo_final = sim.getSimulationTime()
+            minutos = (tempo_final - tempo_inicial) / 60
+            print(f"Concluído em {minutos:.2f} minutos",)
             break
 
         # Critério de tempo: se exceder tempo_max, para
