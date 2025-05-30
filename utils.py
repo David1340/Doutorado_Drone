@@ -61,29 +61,24 @@ class CoverageNode:
     def __repr__(self):
         return f"Node(level={self.level}, pos=({self.x:.1f},{self.y:.1f}), Altitude={self.Altitude:.1f}, children={len(self.children)})"
     
-    def found_children_grid(self,b,sensorCamera,sentido):
-        cell_w = self.width / b
-        cell_h = self.height / b
+    def found_children_grid(self,sensorCamera):
+        cell_w = self.width/2
+        cell_h = self.height/2
 
         hc = sensorCamera.l_inv(cell_w,cell_h)
 
         offset_x = cell_h / 2
         offset_y = cell_w / 2
         children = []
-        '''
-        for j in range(b):
-            for i in range(b):
-                cx = self.x - offset_x + (i + 0.5) * cell_w
-                cy = self.y - offset_y + (j + 0.5) * cell_h
-                child = CoverageNode(cx, cy, hc, cell_w, cell_h,
-                                     level=self.level + 1, parent=self)'''
-        child1 = CoverageNode(self.x - sentido*offset_x, self.y - offset_y, hc, cell_w, cell_h,
+
+        
+        child2 = CoverageNode(self.x - offset_x, self.y + offset_y, hc, cell_w, cell_h,
                                      level=self.level + 1, parent=self)
-        child2 = CoverageNode(self.x - sentido*offset_x, self.y + offset_y, hc, cell_w, cell_h,
+        child1 = CoverageNode(self.x + offset_x, self.y + offset_y, hc, cell_w, cell_h,
                                      level=self.level + 1, parent=self)
-        child3 = CoverageNode(self.x + sentido*offset_x, self.y + offset_y, hc, cell_w, cell_h,
+        child3= CoverageNode(self.x - offset_x, self.y - offset_y, hc, cell_w, cell_h,
                                      level=self.level + 1, parent=self)
-        child4 = CoverageNode(self.x + sentido*offset_x, self.y - offset_y, hc, cell_w, cell_h,
+        child4 = CoverageNode(self.x + offset_x, self.y - offset_y, hc, cell_w, cell_h,
                                      level=self.level + 1, parent=self)
         children.append(child1)
         children.append(child2)
