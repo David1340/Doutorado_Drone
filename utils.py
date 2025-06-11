@@ -43,18 +43,63 @@ class Tree:
             node = CoverageNode(x, y, Altitude,width,height)
             self.nodes.append(node)
 
+class DeepFirst(Tree):
+    def __init__(self,sensorCamera: SensorCamera, areas_de_interesse: list):
+        super().__init__(sensorCamera)
+        self.areas_de_interesse = areas_de_interesse
+    def generate_path(self):
+        queue = list(self.nodes)
+        for i, node in enumerate(queue):
+            if(i < len(queue) -1):
+                self.deepFirst(node, self.sensorCamera,0.01,queue[i+1])
+            else:
+                self.deepFirst(node, self.sensorCamera,0.01,None)
+        waypoints = []
+        for node in self.nodes:
+            waypoints.append([node.x, node.y, node.Altitude])
+            for child in node.children:
+                waypoints.append([child.x, child.y, child.Altitude])
+                for child2 in child.children:
+                    waypoints.append([child2.x, child2.y, child2.Altitude])
+        return waypoints
+
+    def deepFirst(self, node, camera, min_area, nextNode = None):
+        if node.check_interesse(self.areas_de_interesse,min_area):
+            candidatos = node.found_children_grid(camera)
+            filhos = []
+            for filho in candidatos:
+                if(filho.check_interesse(self.areas_de_interesse,min_area)):
+                    filhos.append(filho)
+            if filhos:
+                filhos = ordem_otima_dos_filhos(node,filhos,nextNode)
+            for i, filho in enumerate(filhos):
+                node.add_children(filho)
+                if(node.level < 1):
+                    if(i < len(filhos) - 1):
+                        self.deepFirst(filho, camera, min_area, filhos[i+1])
+                    else:
+                        self.deepFirst(filho, camera,min_area, nextNode)
+
 class Shortcut(Tree):
     def __init__(self,sensorCamera: SensorCamera, areas_de_interesse: list):
         super().__init__(sensorCamera)
         self.areas_de_interesse = areas_de_interesse
 
+    def generate_path(self):
+        waypoints = []
+        for i,waypoint in enumerate(self):
+            waypoints.append([waypoint.x,waypoint.y,waypoint.Altitude])
+            if(i == 91):
+                pass
+        return waypoints
+
     def __iter__(self):
         queue = list(self.nodes)
         last_node = None
         while(queue):
-            print("Tamando do queue: ", len(queue))
+            #print("Tamando do queue: ", len(queue))
             if(last_node == None or last_node.level == 0):
-                print("last_node.level == 0")
+                #print("last_node.level == 0")
                 node = queue.pop(0)
                 if(queue):
                     nextNode = queue[0]
@@ -140,7 +185,7 @@ class Shortcut(Tree):
                                             yield grandchild
                                             last_node = grandchild
             elif(last_node.level == 1):
-                print("last_node.level == 1")
+                #print("last_node.level == 1")
                 node = queue[0]
                 if(len(queue)>1):
                     nextNode = queue[1]
@@ -246,7 +291,7 @@ class Shortcut(Tree):
                     nextNode = queue[1]
                 else:
                     nextNode = None
-                print("last_node.level == 2")
+                #print("last_node.level == 2")
                 children = node.found_children_grid(self.sensorCamera)
                 distancias = [distancia(last_node,child) + distancia(child,node) for child in children] 
                 child = children[np.argmin(distancias)]
