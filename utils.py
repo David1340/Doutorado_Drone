@@ -43,6 +43,59 @@ class Tree:
             node = CoverageNode(x, y, Altitude,width,height)
             self.nodes.append(node)
 
+class BreadthFirst(Tree):
+    def __init__(self,sensorCamera: SensorCamera, areas_de_interesse: list):
+        super().__init__(sensorCamera)
+        self.areas_de_interesse = areas_de_interesse
+        self.horizonte = 5
+
+    def generate_path(self):
+        waypoints = []
+        children = []
+        grandchildren = []
+        for node in self.nodes:
+            
+            waypoints.append([node.x, node.y, node.Altitude])
+
+            if node.check_interesse(self.areas_de_interesse):
+                candidatos = node.found_children_grid(self.sensorCamera)
+                for child in candidatos:
+                    if(child.check_interesse(self.areas_de_interesse,0.01)):
+                        children.append(child)
+                        candidatos2 = child.found_children_grid(self.sensorCamera)
+                        for grandchild in candidatos2:
+                            if(grandchild.check_interesse(self.areas_de_interesse)):
+                                grandchildren.append(grandchild)
+        children.reverse()
+        children_remaining = children.copy()
+        last_node = self.nodes[-1]
+        while children_remaining:
+            janela = children_remaining[:self.horizonte]
+            next_node = children_remaining[self.horizonte] if len(children_remaining) > self.horizonte else None
+
+            otima_ordem = ordem_otima_dos_filhos(last_node, janela, next_node)
+
+            chosen = otima_ordem[0]
+            waypoints.append([chosen.x, chosen.y, chosen.Altitude])
+            children_remaining.remove(chosen)
+            last_node = chosen
+
+        grandchildren_remaining = grandchildren.copy()
+        while grandchildren_remaining:
+            janela = grandchildren_remaining[:self.horizonte]
+            next_node = grandchildren_remaining[self.horizonte] if len(grandchildren_remaining) > self.horizonte else None
+
+            otima_ordem = ordem_otima_dos_filhos(last_node, janela, next_node)
+
+            chosen = otima_ordem[0]
+            waypoints.append([chosen.x, chosen.y, chosen.Altitude])
+            grandchildren_remaining.remove(chosen)
+            last_node = chosen
+
+        return waypoints
+
+
+
 class DeepFirst(Tree):
     def __init__(self,sensorCamera: SensorCamera, areas_de_interesse: list):
         super().__init__(sensorCamera)
