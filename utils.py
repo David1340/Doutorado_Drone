@@ -43,30 +43,6 @@ class Tree:
         for x,y in points:
             node = CoverageNode(x, y, Altitude,width,height)
             self.nodes.append(node)
-    
-    def toHilbertCurve(self,p):
-        # 1. Definir o grid
-        #p = 3  # Número de iterações → grid 2^3 = 8x8
-        N = 2  # Dimensão (2D)
-        hilbert_curve = HilbertCurve(p, N)
-        # 2. Encontrar os limites dos waypoints
-        x_list = [n.x for n in self.nodes]
-        y_list = [n.y for n in self.nodes]
-        xmin, xmax = min(x_list), max(x_list)
-        ymin, ymax = min(y_list), max(y_list)
-
-        hilbert_keys = []
-        for point in self.nodes:
-            grid_point = Tree.xy_to_grid(point.x, point.y,xmin,xmax,ymin,ymax,p)
-            key = hilbert_curve.distance_from_point(grid_point)
-            hilbert_keys.append(key)
-        self.nodes = [point for _, point in sorted(zip(hilbert_keys, self.nodes))]
-
-
-    def xy_to_grid(x,y,xmin,xmax,ymin,ymax,p):
-        gx = int(((x - xmin) / (xmax - xmin)) * (2**p - 1))
-        gy = int(((y - ymin) / (ymax - ymin)) * (2**p - 1))
-        return [gx, gy]
 
 class BreadthFirst(Tree):
     def __init__(self,sensorCamera: SensorCamera, areas_de_interesse: list):
@@ -689,8 +665,8 @@ class HilbertTree(Tree):
 class HilbertMapping():
     def __init__(self,N,nodes):
         self.p = int(np.ceil(np.log2(len(nodes)) / 2)) + 1
+        #self.p = int(np.ceil(np.log2(len(nodes)))) 
         self.hilbert_curve = HilbertCurve(self.p, N)
-
         x_list = [n.x for n in nodes]
         y_list = [n.y for n in nodes]
         self.xmin, self.xmax = min(x_list), max(x_list)
@@ -706,8 +682,8 @@ class HilbertMapping():
         return nodes
 
     def xy_to_grid(self,x,y):
-        gx = int(((x - self.xmin) / (self.xmax - self.xmin)) * (2**self.p - 1))
-        gy = int(((y - self.ymin) / (self.ymax - self.ymin)) * (2**self.p - 1))
+        gx = np.round(((x - self.xmin) / (self.xmax - self.xmin)) * (2**self.p - 1))
+        gy = np.round(((y - self.ymin) / (self.ymax - self.ymin)) * (2**self.p - 1))
         return [gx, gy]
 
 def lawmowerPath(polygon,length,width,angle):
