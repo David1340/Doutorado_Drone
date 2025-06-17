@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import List
 import itertools
+from hilbertcurve.hilbertcurve import HilbertCurve
 
 class SensorCamera():
     def __init__(self, width = 9.6, height = 7.2, pixels_width = 4032, pixels_height = 3024, focal = 6.65):
@@ -42,6 +43,30 @@ class Tree:
         for x,y in points:
             node = CoverageNode(x, y, Altitude,width,height)
             self.nodes.append(node)
+    
+    def toHilbertCurve(self,p):
+        # 1. Definir o grid
+        #p = 3  # Número de iterações → grid 2^3 = 8x8
+        N = 2  # Dimensão (2D)
+        hilbert_curve = HilbertCurve(p, N)
+        # 2. Encontrar os limites dos waypoints
+        x_list = [n.x for n in self.nodes]
+        y_list = [n.y for n in self.nodes]
+        xmin, xmax = min(x_list), max(x_list)
+        ymin, ymax = min(y_list), max(y_list)
+
+        hilbert_keys = []
+        for point in self.nodes:
+            grid_point = Tree.xy_to_grid(point.x, point.y,xmin,xmax,ymin,ymax,p)
+            key = hilbert_curve.distance_from_point(grid_point)
+            hilbert_keys.append(key)
+        self.nodes = [point for _, point in sorted(zip(hilbert_keys, self.nodes))]
+
+
+    def xy_to_grid(x,y,xmin,xmax,ymin,ymax,p):
+        gx = int(((x - xmin) / (xmax - xmin)) * (2**p - 1))
+        gy = int(((y - ymin) / (ymax - ymin)) * (2**p - 1))
+        return [gx, gy]
 
 class BreadthFirst(Tree):
     def __init__(self,sensorCamera: SensorCamera, areas_de_interesse: list):
@@ -93,8 +118,6 @@ class BreadthFirst(Tree):
             last_node = chosen
 
         return waypoints
-
-
 
 class DeepFirst(Tree):
     def __init__(self,sensorCamera: SensorCamera, areas_de_interesse: list):
@@ -486,7 +509,7 @@ class CoverageNode:
                                 (x + height / 2, y - width / 2)])
 
     def __repr__(self):
-        return f"Node(level={self.level}, pos=({self.x:.1f},{self.y:.1f}), Altitude={self.Altitude:.1f}, children={len(self.children)})"
+        return f"Node(level={self.level}, pos=({self.x:.1f},{self.y:.1f}), Altitude={self.Altitude:.1f}, children={len(self.children)}, Visited = {self.visited})"
     
     def found_children_grid(self,sensorCamera) -> List['CoverageNode']:
         cell_w = self.width/2
@@ -510,13 +533,190 @@ class CoverageNode:
         children.extend([child1,child2,child3,child4])
         return children
     
-    def add_children(self, node):
+    def add_children(self, node: 'CoverageNode', visited = True):
         node.parent = self
         node.level = self.level + 1
+        node.visited = visited
         self.children.append(node)
     
     def check_interesse(self, poligonos, min_area=0.01):
         return any(p.intersection(self.polygon).area / self.polygon.area >= min_area for p in poligonos)
+
+class HilbertTree(Tree):
+    def __init__(self,sensorCamera: SensorCamera, areas_de_interesse: list):
+        super().__init__(sensorCamera)
+        self.areas_de_interesse = areas_de_interesse
+        self.HilbertMap1 = None
+        self.HilbertMap2 = None
+        self.HilbertMap3 = None
+    
+    def add_another_levels(self):
+        self.HilbertMap1 = HilbertMapping(2,self.nodes)
+        all_children = []
+        all_grandchildren = []
+        for node in self.nodes:
+            children = node.found_children_grid(self.sensorCamera)
+            for child in children:
+                all_children.append(child)
+                node.add_children(child, False)
+                grandchildren = child.found_children_grid(self.sensorCamera)
+                for grandchild in grandchildren:
+                    child.add_children(grandchild,False)
+                    all_grandchildren.append(grandchild)
+        self.HilbertMap2 = HilbertMapping(2,all_children)
+        self.HilbertMap3 = HilbertMapping(2,all_grandchildren)
+ 
+        self.nodes = self.HilbertMap1.sortNodes(self.nodes)
+        for node in self.nodes:
+            node.children = self.HilbertMap2.sortNodes(node.children)
+            for child in node.children:
+                child.children = self.HilbertMap3.sortNodes(child.children)
+
+    def __iter__(self):
+        last_node = None
+        while(True):
+            last_node = self.Hilbert_coverage(last_node)
+            
+            if(last_node != None):
+                last_node.visited = True
+                if(last_node.parent != None):
+                        last_node.parent.visited = True
+                yield last_node
+            else:
+                break
+
+    def Hilbert_coverage(self, last_node: CoverageNode):
+        if(last_node == None):
+            print("a)")
+            return self.nodes[0]
+        if(last_node.check_interesse(self.areas_de_interesse)):   
+            for child in last_node.children:
+                if(not child.check_interesse(self.areas_de_interesse)):
+                    child.visited = True
+                    if(child.level == 1):
+                        for grandchild in child.children:
+                            grandchild.visited = True
+            if(self.NeedVisit(last_node.children)):
+                print("b)")
+
+                if(last_node.children[0].visited == True):
+                    return self.NextNotVisited(last_node.children[0])
+                else:
+                    return last_node.children[0]
+            else:
+                print("c)")
+                return self.NextNotVisited(last_node)
+                
+        else:
+            if(not self.islast_node(last_node)):
+                
+                if(last_node.parent == None):
+                    print("d)")
+                    return self.NextNotVisited(last_node)
+                else:
+                    print("d) 2")
+                    return last_node.parent
+            else:
+                while(last_node.parent != None):            
+                    if(self.islast_node(last_node)):
+                        last_node = last_node.parent
+                    else:
+                        print("e)")
+                        return self.NextNotVisited(last_node)
+                print("f)")
+                return self.NextNotVisited(last_node)
+
+    def islast_node(self,last_node: CoverageNode):
+        if(last_node.parent == None):
+            return last_node == self.nodes[-1]
+        else:
+            return last_node == last_node.parent.children[-1]
+
+    def Next(self,last_node: CoverageNode):
+
+        if(last_node.level == 0):
+            n = self.nodes.index(last_node)
+            n += 1
+            if(last_node != self.nodes[-1]):
+                return self.nodes[n]
+            else:
+                return None
+        elif(last_node.level == 1):
+            n = last_node.parent.children.index(last_node) 
+            n += 1 
+            if(last_node != last_node.parent.children[-1]):  
+                return last_node.parent.children[n]
+            else:
+                n = self.nodes.index(last_node.parent)
+                n += 1
+                if(last_node.parent != self.nodes[-1]):
+                    return self.nodes[n].children[0]
+                else:
+                    return None
+        elif(last_node.level == 2):
+            n = last_node.parent.children.index(last_node) 
+            n += 1 
+            if(last_node != last_node.parent.children[-1]):  
+                return last_node.parent.children[n]
+            
+            n = last_node.parent.parent.children.index(last_node.parent)
+            n += 1
+            if(last_node.parent != last_node.parent.parent.children[-1]):
+                return  last_node.parent.parent.children[n].children[0]
+            else:
+                n = self.nodes.index(last_node.parent.parent)
+                n += 1
+                if(n < len(self.nodes)):
+                    return self.nodes[n].children[0].children[0]
+                else:
+                    return None
+
+    def NextNotVisited(self,last_node: CoverageNode):
+        if(last_node == None):
+            return None
+        next = self.Next(last_node)
+        if(next == None):
+            return None
+        while(next.visited == True):
+            next = self.Next(next)
+            if(next == None):
+                return None
+        return next
+    
+    def NeedVisit(self,children):
+        if(isinstance(children, list)):
+            return any(child.visited == False for child in children)
+        elif(isinstance(children, CoverageNode)):
+            return children.visited == False
+        elif(children == None):
+            return False
+        else:
+            print(children)
+            print("Erro em NeedVisit")
+
+class HilbertMapping():
+    def __init__(self,N,nodes):
+        self.p = int(np.ceil(np.log2(len(nodes)) / 2)) + 1
+        self.hilbert_curve = HilbertCurve(self.p, N)
+
+        x_list = [n.x for n in nodes]
+        y_list = [n.y for n in nodes]
+        self.xmin, self.xmax = min(x_list), max(x_list)
+        self.ymin, self.ymax = min(y_list), max(y_list)
+    
+    def sortNodes(self,nodes: List[CoverageNode]):
+        hilbert_keys = []
+        for point in nodes:
+            grid_point = self.xy_to_grid(point.x, point.y)
+            key = self.hilbert_curve.distance_from_point(grid_point)
+            hilbert_keys.append(key)
+        nodes = [point for _, point in sorted(zip(hilbert_keys, nodes), key=lambda x: x[0])]
+        return nodes
+
+    def xy_to_grid(self,x,y):
+        gx = int(((x - self.xmin) / (self.xmax - self.xmin)) * (2**self.p - 1))
+        gy = int(((y - self.ymin) / (self.ymax - self.ymin)) * (2**self.p - 1))
+        return [gx, gy]
 
 def lawmowerPath(polygon,length,width,angle):
 
