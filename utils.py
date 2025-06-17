@@ -587,7 +587,6 @@ class HilbertTree(Tree):
 
     def Hilbert_coverage(self, last_node: CoverageNode):
         if(last_node == None):
-            print("a)")
             return self.nodes[0]
         if(last_node.check_interesse(self.areas_de_interesse)):   
             for child in last_node.children:
@@ -597,33 +596,26 @@ class HilbertTree(Tree):
                         for grandchild in child.children:
                             grandchild.visited = True
             if(self.NeedVisit(last_node.children)):
-                print("b)")
-
                 if(last_node.children[0].visited == True):
                     return self.NextNotVisited(last_node.children[0])
                 else:
                     return last_node.children[0]
             else:
-                print("c)")
                 return self.NextNotVisited(last_node)
                 
         else:
             if(not self.islast_node(last_node)):
                 
                 if(last_node.parent == None):
-                    print("d)")
                     return self.NextNotVisited(last_node)
                 else:
-                    print("d) 2")
                     return last_node.parent
             else:
                 while(last_node.parent != None):            
                     if(self.islast_node(last_node)):
                         last_node = last_node.parent
                     else:
-                        print("e)")
                         return self.NextNotVisited(last_node)
-                print("f)")
                 return self.NextNotVisited(last_node)
 
     def islast_node(self,last_node: CoverageNode):
