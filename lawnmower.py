@@ -93,7 +93,7 @@ trajetoria_x = []
 trajetoria_y = []
 parar_tudo = False
 for i, waypoint in enumerate(waypoints):
-    if(i == 1):
+    if(i == 0):
         tempo_inicial = sim.getSimulationTime()
     if parar_tudo:
         break

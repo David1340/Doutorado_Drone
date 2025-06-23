@@ -662,6 +662,12 @@ class HilbertTree(Tree):
             print(children)
             print("Erro em NeedVisit")
 
+    def generate_path(self):
+        waypoints = []
+        for i,node in enumerate(self):
+            waypoints.append([node.x, node.y, node.Altitude])
+        return waypoints
+
 class HilbertMapping():
     def __init__(self,N,nodes):
         self.p = int(np.ceil(np.log2(len(nodes)) / 2)) + 1
