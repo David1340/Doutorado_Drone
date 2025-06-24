@@ -10,7 +10,13 @@ from utils import Shortcut, DeepFirst, BreadthFirst
 from utils import HilbertTree
 from shapely.ops import unary_union
 
-
+def custo(x,y):
+    vx = 10
+    vz = 2.5
+    print("Custo entre pontos:")
+    print(x)
+    print(y)
+    return np.max([np.linalg.norm(x[0:2] - y[0:2])/vx, np.linalg.norm(x[2] - y[2]/vz)])
 
 ##################################### Setup Experimental #########################################
 #random.seed(42)  # For reproducibility
@@ -67,8 +73,10 @@ for _ in range(quantidade):
 
     waypoints = np.array(waypointsLawMower)
     path_length_LawMower = 0
+    path_cost_LawMower = 0
     for i in range(np.size(waypoints,0)-1):
         path_length_LawMower += np.linalg.norm(waypoints[i+1] - waypoints[i])
+        path_cost_LawMower += np.linalg.norm(waypoints[i+1] - waypoints[i])/10
    # print("Coverage Path length (LawMower): ", path_length_LawMower/1000, " km")
 
     waypointsDF = np.array(DFTree.generate_path())
